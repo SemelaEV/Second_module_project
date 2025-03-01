@@ -1,5 +1,5 @@
 import uuid
-from http.server import HTTPServer, BaseHTTPRequestHandler
+from http.server import HTTPServer, BaseHTTPRequestHandler, SimpleHTTPRequestHandler
 from loguru import logger
 
 SERVER_ADDRESS = ('0.0.0.0', 8000)
@@ -11,36 +11,49 @@ logger.add('logs/app.log', format="[{time: YYYY-MM-DD HH:mm:ss}] | {level} | {me
 class ImageHostingHandler(BaseHTTPRequestHandler):
     server_version = 'Image Hosting Server/0.1'
 
-    def __init__(self, request, client_address, server):
-        super().__init__(request, client_address, server)
-        self.routes = {
-            '/': self.route_get_index,
-            '/index.html': self.route_get_index,
-            '/upload': self.route_post_upload
+    routes = {
+            '/': 'get_index',
+            '/index.html': 'get_index',
+            '/upload': 'post_upload'
         }
+
+    def end_headers(self):
+        self.send_header('Access-Control-Allow-Origin', '*')
+        SimpleHTTPRequestHandler.end_headers(self)
 
     def do_GET(self):
         if self.path in self.routes:
-            self.routes[self.path]()
+            exec(f'self.{self.routes[self.path]}()')
         else:
             logger.warning(f'GET 404 {self.path}')
             self.send_response(404, 'Not Found')
 
-    def route_get_index(self):
+    def get_index(self):
         logger.info(f'GET {self.path}')
         self.send_response(200)
         self.send_header('Content-type', 'text/html; charset=utf-8')
         self.end_headers()
-        self.wfile.write(open('index.html', 'rb').read())
+        self.wfile.write(open('static/index.html', 'rb').read())
+
+    def get_images(self):
+        logger.info(f'GET {self.path}')
+        self.send_response(200)
+        self.send_header('Content-type', 'application/json; charset=utf-8')
+        self.end_headers()
+
+        #проверить откуда эти две строки
+        images = [f for f in listdir(UPLOAD_DIR) if isfile(join('images', f))]
+        self.wfile.write(json.dumps({'images': images}).encode('utf-8'))
+
 
     def do_POST(self):
         if self.path == '/upload':
-            self.route_post_upload()
+            exec(f'self.{self.routes[self.path]}()')
         else:
             logger.warning(f'POST 404 {self.path}')
             self.send_response(405, 'Method Not Allowed')
 
-    def route_post_upload(self):
+    def post_upload(self):
         logger.info(f'POST {self.path}')
         content_length = int(self.headers.get('Content-Length'))
         if content_length > ALLOWED_LENGTH:
