@@ -19,7 +19,7 @@ services:
     command: nginx -g "daemon off;"
     image: nginx:latest
     ports:
-      - "8080:80"
+      - "80:80"
     volumes:
       - ./images:/images
       - ./logs:/var/log/nginx
