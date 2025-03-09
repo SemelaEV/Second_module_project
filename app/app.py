@@ -104,7 +104,6 @@ class ImageHostingHandler(BaseHTTPRequestHandler):
         self.send_response(301)
         self.send_header('Location', f'/images/{image_name}')
         self.end_headers()
-        self.wfile.write(open('upload_success.html', 'rb').read())
 
 def run():
     httpd = HTTPServer(SERVER_ADDRESS, ImageHostingHandler)
