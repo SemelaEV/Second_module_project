@@ -62,7 +62,7 @@ class ImageHostingHandler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header('Content-type', 'text/html; charset=utf-8')
         self.end_headers()
-        self.wfile.write(open('static/index.html', 'rb').read())
+        self.wfile.write(open('upload.html', 'rb').read())
 
     def post_upload(self):
         logger.info(f'POST {self.path}')
