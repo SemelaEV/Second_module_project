@@ -105,6 +105,7 @@ class ImageHostingHandler(BaseHTTPRequestHandler):
         self.send_header('Location', f'/images/{image_name}')
         self.end_headers()
 
+
 def run():
     httpd = HTTPServer(SERVER_ADDRESS, ImageHostingHandler)
     try:
