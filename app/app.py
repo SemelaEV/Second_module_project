@@ -8,12 +8,85 @@ from os.path import isfile, join
 from PIL import Image
 from loguru import logger
 
+import psycopg2
+from environs import Env
+
+
 SERVER_ADDRESS = ('0.0.0.0', 8000)
 ALLOWED_EXTENSIONS = ('.jpg', 'с', '.png', '.gif')
 ALLOWED_LENGTH = (5 * 1024 * 1024)
 UPLOAD_DIR = 'images'
 
 logger.add('logs/app.log', format="[{time: YYYY-MM-DD HH:mm:ss}] | {level} | {message}")
+
+class DBManager(metaclass=SingletonMeta):
+    def __init__(self, dbname, user, password, host, port):
+        self.dbname = dbname
+        self.user = user
+        self.password = password
+        self.host = host
+        self.port = port
+        self.conn = self.connect()
+
+    def connect(self):
+        try:
+            self.conn = psycopg2.connect(
+                dbname=self.dbname, user=self.user, password=self.password, host=self.host, port=self.port)
+            return self.conn
+        except psycopg2.Error as e:
+            logger.error(f"DB connection error: {e}")
+
+    def close(self):
+        self.conn.close()
+
+    def execute(self, query):
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute(query)
+        except psycopg2.Error as e:
+            logger.error(f"Error executing query: {e}")
+
+    def execute_file(self, filename):
+        try:
+            self.execute(open(f'./{filename}').read())
+        except FileNotFoundError:
+            logger.error(f"File {filename} not found")
+
+    def init_tables(self):
+        self.execute_file('init_tables.sql')
+        logger.info("Table initialized")
+        self.conn.commit()
+
+    def get_images(self, page=1, limit=10):
+        offset = (page - 1) * limit
+        logger.info(f'Try to get images with offset {offset}')
+        with self.connect().cursor() as cursor:
+            cursor.execute(
+                "SELECT * FROM images ORDER BY upload_time DESC LIMIT %s OFFSET %s", (limit, offset))
+            return cursor.fetchall()
+
+    def add_image(self, filename, original_filename, size, ext):
+        logger.info(f"Try to add image {filename}")
+        with self.conn.cursor() as cursor:
+            cursor.execute("INSERT INTO images (filename, original_name, size, file_type) VALUES (%s, %s, %s, %s)",
+                           (filename, original_filename, size, ext))
+            self.conn.commit()
+
+    def clear_table(self):
+        with self.conn.cursor() as cursor:
+            cursor.execute("DELETE FROM images")
+        self.conn.commit()
+
+    def delete_image(self, filename):
+        logger.info(f"Try to delete image {filename}")
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute(
+                    "DELETE FROM images WHERE filename = %s", (filename))
+            self.conn.commit()
+        except psycopg2.Error as e:
+            logger.error(f"Error deleting image {e}")
+
 
 class ImageHostingHandler(BaseHTTPRequestHandler):
     server_version = 'Image Hosting Server/0.1'
@@ -108,6 +181,16 @@ class ImageHostingHandler(BaseHTTPRequestHandler):
 
 def run():
     httpd = HTTPServer(SERVER_ADDRESS, ImageHostingHandler)
+
+    env = Env()
+    env.read_env()
+
+    db_name = env('POSTGRES_DB')
+    db_username = env('POSTGRES_USER')
+    db_password = env('POSTGRES_PASSWORD')
+    db_host = env('POSTGRES_HOST')
+    db_port = env('POSTGRES_PORT')
+
     try:
         logger.info(f'Serving at http://{SERVER_ADDRESS[0]}:{SERVER_ADDRESS[1]}')
         httpd.serve_forever()

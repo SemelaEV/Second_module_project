@@ -1,7 +1,6 @@
 networks:
   default:
 
-
 services:
   app:
     container_name: app
@@ -18,14 +17,28 @@ services:
     container_name: nginx
     command: nginx -g "daemon off;"
     image: nginx:latest
+    restart: always
     ports:
       - "80:80"
     volumes:
       - ./images:/images
       - ./logs:/var/log/nginx
-      - ./static:/etc/nginx/html
+      - ./static:/usr/share/nginx/html
       - ./nginx.conf:/etc/nginx/nginx.conf
     networks:
       - default
     depends_on:
       - app
+
+  db:
+    container_name: db_ih
+    image: postgres:latest
+    env_file:
+      - ./app/.env
+    ports:
+      - "5432:5432"
+    volumes:
+      - image_hosting_database:/var/lib/postgres/data
+    networks:
+      - default
+    restart: always

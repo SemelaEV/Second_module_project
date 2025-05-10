@@ -7,7 +7,7 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r  requirements.txt
 
 COPY app.py .
-COPY static/upload.html upload.html
+COPY static/upload/upload.html upload.html
 
 EXPOSE 8000
 
