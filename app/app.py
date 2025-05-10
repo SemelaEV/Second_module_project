@@ -1,3 +1,5 @@
+import hashlib
+import io
 import uuid
 import cgi
 import os
@@ -10,6 +12,7 @@ from loguru import logger
 
 import psycopg2
 from environs import Env
+from urllib.parse import parse_qs
 
 
 SERVER_ADDRESS = ('0.0.0.0', 8000)
@@ -99,6 +102,7 @@ class ImageHostingHandler(BaseHTTPRequestHandler):
         self.post_routes = {
             '/upload': self.post_upload,
         }
+        self.db = DBManager()
         super().__init__(request, client_address, server)
 
 
@@ -121,14 +125,35 @@ class ImageHostingHandler(BaseHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         SimpleHTTPRequestHandler.end_headers(self)
 
-    def get_images(self):
+    def get_images(self, limit):
         logger.info(f'GET {self.path}')
+
+        query_components = parse_qs(self.headers.get('Query-String'))
+        page = int(query_components.get('page', ['1'])[0])
+
+        if page < 1:
+            page = 1
+
+        images = self.db.get_images(page, limit)
+
+        images_json = []
+
+        for image in images:
+            image = {
+                'filename': image[1],
+                'original_filename': image[2],
+                'size': image[3],
+                'upload_date': image[4].strftime('%Y-%m-%d %H:%M:%s'),
+                'file_type': image[5]
+            }
+
+            images_json.append(image)
+
         self.send_response(200)
         self.send_header('Content-type', 'application/json; charset=utf-8')
         self.end_headers()
 
-        images = [f for f in listdir(UPLOAD_DIR) if isfile(join('images', f))]
-        self.wfile.write(json.dumps({'images': images}).encode('utf-8'))
+        self.wfile.write(json.dumps({'images': images_json}).encode('utf-8'))
 
     def get_upload(self):
         logger.info(f'GET {self.path}')
@@ -140,6 +165,17 @@ class ImageHostingHandler(BaseHTTPRequestHandler):
     def post_upload(self):
         logger.info(f'POST {self.path}')
         content_length = int(self.headers.get('Content-Length'))
+
+        original_filename, ext = os.path.splitext(self.headers.get('Filename'))
+
+        filedata = self.rfile.read(content_length)
+        image_raw_data = io.BytesIO(filedata)
+
+        filename = hashlib.file_digest(image_raw_data, 'md5').hexdigest()
+        file_size_kb = round(content_length / 1024)
+
+        self.db.add_image(filename, original_filename, file_size_kb, ext)
+
         if content_length > ALLOWED_LENGTH:
             logger.error('Payload Too large')
             self.send_response(413, 'Payload Too large')
@@ -190,6 +226,14 @@ def run():
     db_password = env('POSTGRES_PASSWORD')
     db_host = env('POSTGRES_HOST')
     db_port = env('POSTGRES_PORT')
+
+    db = DBManager(env('POSTGRES_DB'),
+                   env('POSTGRES_USER'),
+                   env('POSTGRES_PASSWORD'),
+                   env('POSTGRES_HOST'),
+                   env('POSTGRES_PORT'))
+
+    db.init_tables()
 
     try:
         logger.info(f'Serving at http://{SERVER_ADDRESS[0]}:{SERVER_ADDRESS[1]}')
