@@ -10,6 +10,27 @@
 <body>
     <h1 class="mb-1 text-center">Ваши фото</h1>
     <div id="images"></div>
+    <div class="container m-2">
+            <nav>
+              <ul class="pagination justify-content-center">
+                  <li class="page-item">
+                      <button class="page-link" id="prevPage" disabled aria-label="Previous">
+                          <span aria-hidden="true">&laquo;</span>
+                      </button>
+                  </li>
+                  <li class="page-item">
+                      <button class="page-link" disabled id="currentPage" aria-label="Next">
+                          1
+                      </button>
+                  </li>
+                  <li class="page-item">
+                      <button class="page-link" id="nextPage" aria-label="Next">
+                          <span aria-hidden="true">&raquo;</span>
+                      </button>
+                  </li>
+              </ul>
+          </nav>
+    </div>
     <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
         <button onclick="location.href='/'" class="btn btn-outline-primary btn-lg px-4 gap-3">На главную</button>
     </div>

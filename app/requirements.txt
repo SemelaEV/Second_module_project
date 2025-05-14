@@ -1,2 +1,4 @@
 loguru
 pillow
+psycopg2-binary
+environs

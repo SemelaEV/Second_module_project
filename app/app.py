@@ -14,13 +14,31 @@ import psycopg2
 from environs import Env
 from urllib.parse import parse_qs
 
-
 SERVER_ADDRESS = ('0.0.0.0', 8000)
 ALLOWED_EXTENSIONS = ('.jpg', 'с', '.png', '.gif')
 ALLOWED_LENGTH = (5 * 1024 * 1024)
 UPLOAD_DIR = 'images'
 
 logger.add('logs/app.log', format="[{time: YYYY-MM-DD HH:mm:ss}] | {level} | {message}")
+
+class SingletonMeta(type):
+    """
+    The Singleton class can be implemented in different ways in Python. Some
+    possible methods include: base class, decorator, metaclass. We will use the
+    metaclass because it is best suited for this purpose.
+    """
+
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        """
+        Possible changes to the value of the `__init__` argument do not affect
+        the returned instance.
+        """
+        if cls not in cls._instances:
+            instance = super().__call__(*args, **kwargs)
+            cls._instances[cls] = instance
+        return cls._instances[cls]
 
 class DBManager(metaclass=SingletonMeta):
     def __init__(self, dbname, user, password, host, port):
@@ -90,7 +108,6 @@ class DBManager(metaclass=SingletonMeta):
         except psycopg2.Error as e:
             logger.error(f"Error deleting image {e}")
 
-
 class ImageHostingHandler(BaseHTTPRequestHandler):
     server_version = 'Image Hosting Server/0.1'
 
@@ -101,6 +118,9 @@ class ImageHostingHandler(BaseHTTPRequestHandler):
         }
         self.post_routes = {
             '/upload': self.post_upload,
+        }
+        self.delete_routes = {
+            '/delete_image/': ImageHostingHandler.delete_image,
         }
         self.db = DBManager()
         super().__init__(request, client_address, server)
@@ -154,6 +174,12 @@ class ImageHostingHandler(BaseHTTPRequestHandler):
         self.end_headers()
 
         self.wfile.write(json.dumps({'images': images_json}).encode('utf-8'))
+
+    def get_image_gallery(self):
+        self.get_images(limit=9)
+
+    def get_image_list(self):
+        self.get_images(limit=10)
 
     def get_upload(self):
         logger.info(f'GET {self.path}')
@@ -214,18 +240,30 @@ class ImageHostingHandler(BaseHTTPRequestHandler):
         self.send_header('Location', f'/images/{image_name}')
         self.end_headers()
 
+    def delete_image(self, image):
+        logger.info(f'Try to delete image {image}')
+        filename, ext = os.path.splitext(image)
+        if not filename:
+            logger.warning('Filename header not found')
+            self.send_response(404)
+            self.end_headers()
+            return
+        self.db.delete_image(filename)
+        image_fullpath = os.path.join('./images/', f'{filename}{ext}')
+        if not os.path.exists(image_fullpath):
+            logger.warning(f'Image file {filename}{ext} not found')
+            self.send_response(404)
+            self.end_headers()
+        os.remove(image_fullpath)
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/json')
+        self.send_header('Success', 'Image deleted')
 
-def run():
-    httpd = HTTPServer(SERVER_ADDRESS, ImageHostingHandler)
+def run(server_class=HTTPServer, handler_class=ImageHostingHandler):
+    httpd = server_class(SERVER_ADDRESS, handler_class)
 
     env = Env()
     env.read_env()
-
-    db_name = env('POSTGRES_DB')
-    db_username = env('POSTGRES_USER')
-    db_password = env('POSTGRES_PASSWORD')
-    db_host = env('POSTGRES_HOST')
-    db_port = env('POSTGRES_PORT')
 
     db = DBManager(env('POSTGRES_DB'),
                    env('POSTGRES_USER'),
@@ -238,12 +276,11 @@ def run():
     try:
         logger.info(f'Serving at http://{SERVER_ADDRESS[0]}:{SERVER_ADDRESS[1]}')
         httpd.serve_forever()
-    except Exception:
+    except KeyboardInterrupt:
         pass
     finally:
         logger.info('Server stopped')
         httpd.server_close()
-
 
 if __name__ == "__main__":
     run()

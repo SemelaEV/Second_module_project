@@ -1,9 +1,16 @@
 networks:
   default:
 
+volumes:
+  images:
+  logs:
+  image_hosting_database:
+
 services:
   app:
     container_name: app
+    env_file:
+      - ./.env
     build: .
     ports:
       - "8000:8000"
@@ -12,6 +19,9 @@ services:
       - ./logs:/app/logs
     networks:
       - default
+    depends_on:
+      db:
+        condition: service_healthy
 
   nginx:
     container_name: nginx
@@ -34,9 +44,14 @@ services:
     container_name: db_ih
     image: postgres:latest
     env_file:
-      - ./app/.env
+      - ./.env
     ports:
       - "5432:5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     volumes:
       - image_hosting_database:/var/lib/postgres/data
     networks:
