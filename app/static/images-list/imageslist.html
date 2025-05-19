@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="ru">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-SgOJa3DmI69IUzQ2PVdRZhwQ+dy64/BUtbMJw1MZ8t5HZApcHrRKUc4W0kG879m7" crossorigin="anonymous">
+        <title>Image Hosting</title>
+    </head>
+    <body style="background-color: cornflower blue;">
+        <div class="container-md px-4 py-5 my-5 text-center bg-body-tertiary bg-opacity-50 rounded-3">
+            <img src="../logo.png" alt="logo" width="256" height="256">
+            <h1>Таблица изображений</h1>
+            <div class="rounded-3 bg-body bg-opacity-50 p-3">
+            <div id="imageslist">
+                    <div id="images-placeholder" class="row align-items-center">
+                        <table id="images_table" class="table table-striped">
+                            <thead>
+                                <th>Эскиз</th>
+                                <th>Ссылка</th>
+                                <th>Размер (КБ)</th>
+                                <th>Дата загрузки</th>
+                                <th>Удалить</th>
+                            </thead>
+                            <tbody id="imagesTableBody">
+
+                            </tbody>
+                        </table>
+                    </div>
+            </div>
+        </div>
+
+        <div class="container m-2">
+            <nav>
+              <ul class="pagination justify-content-center">
+                  <li class="page-item">
+                      <button class="page-link" id="prevPage" disabled aria-label="Previous">
+                          <span aria-hidden="true">&laquo;</span>
+                      </button>
+                  </li>
+                  <li class="page-item">
+                      <button class="page-link" disabled id="currentPage" aria-label="Next">
+                          1
+                      </button>
+                  </li>
+                  <li class="page-item">
+                      <button class="page-link" id="nextPage" aria-label="Next">
+                          <span aria-hidden="true">&raquo;</span>
+                      </button>
+                  </li>
+              </ul>
+          </nav>
+          </div>
+
+            <div class="m-2">
+                <button onclick="location.href='/'" class="btn btn-primary" type="button">На главную</button>
+            </div>
+        </div>
+
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js" integrity="sha384-k6d4wzSIapyDyv1kpU366/PK5hCdSbCRGRCMv+eplOQJWyd1fbcAu9OCUj5zNLiq" crossorigin="anonymous"></script>
+        <script src="./imageslist.js"></script>
+    </body>
+    <footer class="py-3 my-4">
+        <p class="text-center text-body-secondary">Second PyRush Project, 2025</p>
+    </footer>
+</html>

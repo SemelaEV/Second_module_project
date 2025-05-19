@@ -113,11 +113,11 @@ class ImageHostingHandler(BaseHTTPRequestHandler):
 
     def __init__(self, request, client_address, server):
         self.get_routes = {
-            '/upload': self.get_upload,
-            '/images': self.get_images,
+            '/api/images/': ImageHostingHandler.get_image_gallery,
+            '/api/images-list/': ImageHostingHandler.get_image_list,
         }
         self.post_routes = {
-            '/upload': self.post_upload,
+            '/upload': ImageHostingHandler.post_upload,
         }
         self.delete_routes = {
             '/delete_image/': ImageHostingHandler.delete_image,
