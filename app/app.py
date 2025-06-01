@@ -120,7 +120,7 @@ class ImageHostingHandler(BaseHTTPRequestHandler):
             '/upload': ImageHostingHandler.post_upload,
         }
         self.delete_routes = {
-            '/delete_image/': ImageHostingHandler.delete_image,
+            '/api/delete/<image_id>': ImageHostingHandler.delete_image,
         }
         self.db = DBManager()
         super().__init__(request, client_address, server)
@@ -240,9 +240,9 @@ class ImageHostingHandler(BaseHTTPRequestHandler):
         self.send_header('Location', f'/images/{image_name}')
         self.end_headers()
 
-    def delete_image(self, image):
-        logger.info(f'Try to delete image {image}')
-        filename, ext = os.path.splitext(image)
+    def delete_image(self, image_id):
+        logger.info(f'Try to delete image {image_id}')
+        filename, ext = os.path.splitext(image_id)
         if not filename:
             logger.warning('Filename header not found')
             self.send_response(404)
